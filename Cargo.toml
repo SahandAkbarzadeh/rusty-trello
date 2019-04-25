@@ -1,5 +1,5 @@
 [package]
-name = "rusty-trello"
+name = "rusty_trello"
 version = "0.1.0"
 authors = ["Sahand <sahandevs@gmail.com>"]
 edition = "2018"
