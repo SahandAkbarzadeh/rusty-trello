@@ -1,2 +1,1 @@
-mod rusty_trello;
-
+pub mod rusty_trello;

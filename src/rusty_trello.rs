@@ -1,10 +1,10 @@
-mod rusty_trello {
+pub mod rusty_trello {
     use rand::Rng;
     use std::collections::HashMap;
-    
+
     use std::hash::{Hash, Hasher};
 
-    enum Id {
+    pub enum Id {
         EntityId(String),
         DeletedEntityId(String),
         PlaceHolderId(String),
@@ -31,7 +31,7 @@ mod rusty_trello {
         }
     }
 
-    impl std::cmp::Eq for Id { }
+    impl std::cmp::Eq for Id {}
 
     impl Id {
         fn generate_placeholder_id() -> Id {
@@ -57,7 +57,7 @@ mod rusty_trello {
     }
 
     struct BoardEntity {
-        pub id: Box<Id>
+        pub id: Box<Id>,
     }
 
     impl Entity for BoardEntity {
@@ -67,7 +67,7 @@ mod rusty_trello {
     }
 
     struct ListEntity {
-        pub id: Box<Id>
+        pub id: Box<Id>,
     }
 
     impl Entity for ListEntity {
@@ -76,9 +76,8 @@ mod rusty_trello {
         }
     }
 
-
     struct MemberEntity {
-        pub id: Box<Id>
+        pub id: Box<Id>,
     }
 
     impl Entity for MemberEntity {
@@ -88,7 +87,7 @@ mod rusty_trello {
     }
 
     struct CardEntity {
-        id: Box<Id>
+        id: Box<Id>,
     }
 
     impl Entity for CardEntity {
@@ -97,9 +96,8 @@ mod rusty_trello {
         }
     }
 
-
     enum Authorization {
-        AppKeySecret(String, String)
+        AppKeySecret(String, String),
     }
 
     struct Client<'a> {
@@ -109,14 +107,50 @@ mod rusty_trello {
 
     impl<'a> Client<'a> {
         fn new(auth: &Authorization) -> Client {
-            Client { authorization: auth, entities: HashMap::new() }
+            Client {
+                authorization: auth,
+                entities: HashMap::new(),
+            }
         }
 
-        fn get_entity_by_id(&self, id: &Id ) -> Result<&Box<Entity>,&'static str> {
+        fn get_entity_by_id(&self, id: &Id) -> Result<&Box<Entity>, &'static str> {
             match self.entities.get(id) {
                 Some(value) => Ok(value),
-                None => Err("Entity with given id not found")
+                None => Err("Entity with given id not found"),
             }
         }
     }
+}
+
+#[cfg(test)]
+mod test_setup {
+    use super::rusty_trello::*;
+    use std::env;
+    #[test]
+    fn env_vars_set() {
+        match env::var("TRELLO_APP_KEY") {
+            Ok(s) => assert!(!s.is_empty()),
+            _ => assert!(false)
+        }
+
+        match env::var("TRELLO_SECRET") {
+            Ok(s) => assert!(!s.is_empty()),
+            _ => assert!(false)
+        }
+    }
+}
+
+#[cfg(test)]
+mod test_basic_validations {
+    use super::rusty_trello::*;
+    use std::env;
+
+    #[test]
+    fn test_id_eq() {
+        assert!(Id::EntityId("test".to_string()) == Id::EntityId("test".to_string()));
+        assert!(Id::EntityId("test".to_string()) != Id::EntityId("pp".to_string()));
+        assert!(Id::EntityId("test".to_string()) != Id::PlaceHolderId("test".to_string()));
+        assert!(Id::EntityId("test".to_string()) != Id::DeletedEntityId("test".to_string()));
+    }
+
 }
