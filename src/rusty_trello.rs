@@ -34,7 +34,7 @@ pub mod rusty_trello {
     impl std::cmp::Eq for Id {}
 
     impl Id {
-        fn generate_placeholder_id() -> Id {
+        pub fn generate_placeholder_id() -> Id {
             let mut rng = rand::thread_rng();
             let letter: char = rng.gen_range(b'A', b'Z') as char;
             let number: u32 = rng.gen_range(0, 999999);
@@ -151,6 +151,15 @@ mod test_basic_validations {
         assert!(Id::EntityId("test".to_string()) != Id::EntityId("pp".to_string()));
         assert!(Id::EntityId("test".to_string()) != Id::PlaceHolderId("test".to_string()));
         assert!(Id::EntityId("test".to_string()) != Id::DeletedEntityId("test".to_string()));
+    }
+
+    #[test]
+    fn test_generated_placeholder_id_is_valid() {
+        match Id::generate_placeholder_id() {
+            (Id::EntityId(_)) => assert!(false),
+            (Id::DeletedEntityId(_)) => assert!(false),
+            (Id::PlaceHolderId(value)) => assert!(!value.is_empty()),
+        }
     }
 
 }
