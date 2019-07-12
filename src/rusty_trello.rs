@@ -3,6 +3,7 @@ pub mod rusty_trello {
     use std::collections::HashMap;
 
     use std::hash::{Hash, Hasher};
+    use std::error::Error;
 
     pub enum Id {
         EntityId(String),
@@ -44,79 +45,102 @@ pub mod rusty_trello {
     }
 
     trait Entity {
-        fn get_id(&self) -> &Box<Id>;
+        fn get_id(&self) -> &Id;
     }
 
     // trello entities
 
-    enum Entities {
-        Board(BoardEntity),
-        List(ListEntity),
-        Member(MemberEntity),
-        Card(CardEntity),
+    pub enum Entities<'a> {
+        Board(BoardEntity<'a>),
+        List(ListEntity<'a>),
+        Member(MemberEntity<'a>),
+        Card(CardEntity<'a>),
     }
 
-    struct BoardEntity {
-        pub id: Box<Id>,
+    pub struct BoardEntity<'a> {
+        id: &'a Id,
     }
 
-    impl Entity for BoardEntity {
-        fn get_id(&self) -> &Box<Id> {
-            &self.id
+    impl<'a> Entity for BoardEntity<'a> {
+        fn get_id(&self) -> &Id {
+            self.id
         }
     }
 
-    struct ListEntity {
-        pub id: Box<Id>,
+    pub struct ListEntity<'a> {
+        id: &'a Id,
     }
 
-    impl Entity for ListEntity {
-        fn get_id(&self) -> &Box<Id> {
-            &self.id
+    impl<'a> Entity for ListEntity<'a> {
+        fn get_id(&self) -> &Id {
+            self.id
         }
     }
 
-    struct MemberEntity {
-        pub id: Box<Id>,
+    pub struct MemberEntity<'a> {
+        id: &'a Id,
     }
 
-    impl Entity for MemberEntity {
-        fn get_id(&self) -> &Box<Id> {
-            &self.id
+    impl<'a> MemberEntity<'a> {
+        pub fn new(id: &Id) -> MemberEntity {
+            MemberEntity { id }
         }
     }
 
-    struct CardEntity {
-        id: Box<Id>,
-    }
-
-    impl Entity for CardEntity {
-        fn get_id(&self) -> &Box<Id> {
-            &self.id
+    impl<'a> Entity for MemberEntity<'a> {
+        fn get_id(&self) -> &Id {
+            self.id
         }
     }
 
-    enum Authorization {
-        AppKeySecret(String, String),
+    pub struct CardEntity<'a> {
+        id: &'a Id,
     }
 
-    struct Client<'a> {
-        authorization: &'a Authorization,
+    impl<'a> Entity for CardEntity<'a> {
+        fn get_id(&self) -> &Id {
+            self.id
+        }
+    }
+
+    pub enum Authorization {
+        AppKeyAndToken(String, String),
+    }
+
+    pub struct Client {
+        authorization: Authorization,
         entities: HashMap<Id, Box<Entity>>,
     }
 
-    impl<'a> Client<'a> {
-        fn new(auth: &Authorization) -> Client {
+    impl Client {
+        pub fn new(auth: Authorization) -> Client {
             Client {
                 authorization: auth,
                 entities: HashMap::new(),
             }
         }
 
-        fn get_entity_by_id(&self, id: &Id) -> Result<&Box<Entity>, &'static str> {
+        pub fn create_by_environment_variables() -> Result<Client, Box<dyn Error>> {
+            use std::env;
+            let app_key = env::var("TRELLO_APP_KEY")?;
+            let token = env::var("TRELLO_TOKEN")?;
+            Ok(Client::new(Authorization::AppKeyAndToken(app_key, token)))
+        }
+
+        pub fn get_entity_by_id(&self, id: &Id) -> Result<&Box<Entity>, &'static str> {
             match self.entities.get(id) {
                 Some(value) => Ok(value),
                 None => Err("Entity with given id not found"),
+            }
+        }
+
+        pub fn get_or_create_card_by_id(&mut self, id: Id) -> Result<&Entity, &'static str> {
+            match self.get_entity_by_id(&id) {
+                Ok(value) => Ok(&**value),
+                _ => match self.entities.insert(id, Box::new(MemberEntity::new(&id))) {
+                    Some(value) => Ok(&*value),
+                    None => Err("could not insert new entity to the client's container")
+                }
             }
         }
     }
@@ -126,6 +150,7 @@ pub mod rusty_trello {
 mod test_setup {
     use super::rusty_trello::*;
     use std::env;
+
     #[test]
     fn env_vars_set() {
         match env::var("TRELLO_APP_KEY") {
@@ -133,10 +158,20 @@ mod test_setup {
             _ => assert!(false)
         }
 
-        match env::var("TRELLO_SECRET") {
+        match env::var("TRELLO_TOKEN") {
             Ok(s) => assert!(!s.is_empty()),
             _ => assert!(false)
         }
+    }
+}
+
+#[cfg(test)]
+mod test_client_auth {
+    use super::rusty_trello::*;
+
+    #[test]
+    fn test_authorization() {
+        let client = Client::create_by_environment_variables().unwrap();
     }
 }
 
@@ -156,10 +191,9 @@ mod test_basic_validations {
     #[test]
     fn test_generated_placeholder_id_is_valid() {
         match Id::generate_placeholder_id() {
-            (Id::EntityId(_)) => assert!(false),
-            (Id::DeletedEntityId(_)) => assert!(false),
-            (Id::PlaceHolderId(value)) => assert!(!value.is_empty()),
+            Id::EntityId(_) => assert!(false),
+            Id::DeletedEntityId(_) => assert!(false),
+            Id::PlaceHolderId(value) => assert!(!value.is_empty()),
         }
     }
-
 }
