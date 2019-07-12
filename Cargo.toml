@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 rand = "^0.6"
 reqwest = "^0.9.18"
+url = "^1.7.2"
