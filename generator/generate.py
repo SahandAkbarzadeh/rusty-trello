@@ -28,6 +28,18 @@ def main():
 
     print(f"found {len(group_by_endpoint)} unique endpoints with different methods")
 
+    group_by_category = {}
+
+    for endpoint in endpoints:
+        group_name = endpoint['api']['url'].strip('/').split('/')[0]
+        if not group_by_category.get(group_name):
+            group_by_category[group_name] = []
+        group_by_category[group_name].append(endpoint)
+
+    print(f"found {len(group_by_category)} categories")
+
+    [print(f"\t{category}") for category in group_by_category]
+
 
 if __name__ == "__main__":
     main()
